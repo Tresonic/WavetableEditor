@@ -1,13 +1,14 @@
 <head>
-<title>bitluni's Watable Editor</title>
+<title>Wavetable Editor</title>
 <script>
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 var context = new AudioContext();
 
 var project = {
 	name: "sounds",
-	sampleRate: 22050,
-	normalize: true,
+	sampleRate: 32000,
+	normalize: false,
+    eightBit: false,
 	wavetable: []
 	};
 
@@ -164,26 +165,40 @@ function wavetableToHeader(name, sampleRate)
 {
 	var wavetable = project.wavetable;
 	var offsets = [0];
-	for(var i = 0; i < wavetable.length; i++)
-		offsets.push(offsets[i] + wavetable[i].array.length);
-	var b = new Int8Array(offsets[offsets.length - 1]);
+	for(var i = 0; i < wavetable.length; i++) {
+        offsets.push(offsets[i] + wavetable[i].array.length);
+    }
+    if(project.eightbit)
+	    var b = new Int8Array(offsets[offsets.length - 1]);
+    else
+        var b = new Int16Array(offsets[offsets.length - 1]);
+
 	for(var i = 0; i < wavetable.length; i++)
 		for(var j = 0; j < wavetable[i].array.length; j++)
-			b[offsets[i] + j] = Math.round(wavetable[i].array[j] * 127);
+            if(project.eightbit) {
+			    b[offsets[i] + j] = Math.round(wavetable[i].array[j] * 127);
+            } else {
+                b[offsets[i] + j] = Math.round(wavetable[i].array[j] * 32767);
+            }
 	
 	var text = "const int " + name + "Offsets[] = {"
 	for(var i = 0; i < offsets.length; i++)
 		text += offsets[i] + ", ";
 	text += "};\r\n";
 	
-	text += "const signed char " + name + "Samples[] = {"
+    if(project.eightbit) {
+	    text += "const int8_t " + name + "Data[] = {"
+    } else {
+        text += "const int16_t " + name + "Data[] = {"
+    }	
+    
 	for(var i = 0; i < b.length; i++)
 	{
 		if((i & 63) == 0) text += "\r\n";
 		text += b[i] + ", ";
 	}
 	text += "};\r\n";
-	text += "Wavetable " + name + "(" + name + "Samples, " + wavetable.length + ", " + name + "Offsets, " + sampleRate + ");\r\n";
+
 	return text;
 }
 
@@ -206,8 +221,8 @@ function addListItem(i, id, name)
 	soundDiv.appendChild(newButton("&#10008;", function(){ deleteSound(id)}));
 	soundDiv.appendChild(newButton("&#x2B07;", function(){ downSound(id); }));
 	soundDiv.appendChild(newButton("&#x2B06;", function(){ upSound(id); }));
-	soundDiv.appendChild(newButton("&#x2BC0;", function(){ stopSound(id); }));
-	soundDiv.appendChild(newButton("&#x2BC8;", function(){ playSound(id); }));
+	soundDiv.appendChild(newButton("&#9642;", function(){ stopSound(id); }));
+	soundDiv.appendChild(newButton("&#9655;", function(){ playSound(id); }));
 	var span = document.createElement("span");
 	span.innerHTML = name;
 	soundDiv.appendChild(span);
@@ -222,6 +237,7 @@ function loadProject(event)
 		document.getElementById("name").value =	project.name;
 		document.getElementById("samplerate").value = project.sampleRate;
 		document.getElementById("normalize").checked = project.normalize;
+        document.getElementById("eightbit").checked = project.eightbit;
 		for(var i = 0; i < project.wavetable.length; i++)
 			context.decodeAudioData((new Uint8Array(project.wavetable[i].source)).buffer, 
 			(function(id){ return function(buffer){
@@ -274,6 +290,7 @@ function update()
 	project.name = document.getElementById("name").value;
 	project.sampleRate = document.getElementById("samplerate").value;
 	project.normalize = document.getElementById("normalize").checked;
+    project.eightbit = document.getElementById("eightbit").checked;
 
 	document.getElementById("sounds").innerHTML = "";
 	for(var i = 0; i < project.wavetable.length; i++)
@@ -363,7 +380,7 @@ function update()
 </style>
 </head>
 <body style="font-family: arial">
-<h1>bitluni's Wavetable Editor</h1>
+<h1>Wavetable Editor</h1>
 <div style="max-width: 700px">
 	<div class="menu">
 		<span class="project block">
@@ -379,6 +396,7 @@ function update()
 		<span class="block options">
 			<span class="option">name <input id="name" type="text" value="sounds" style="width: 80px" onchange="update()"></span>
 			<span class="option"><input id="normalize" type="checkbox" checked onchange="update()">normalize</span>
+            <span class="option"><input id="eightbit" type="checkbox" checked onchange="update()">eightbit</span>
 			<span class="option">sampling rate <input id="samplerate" type="number" value="22050" style="width: 60px" onchange="update()"></span>
 		</span>
 	</div>
