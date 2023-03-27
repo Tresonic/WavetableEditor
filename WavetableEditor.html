@@ -181,7 +181,8 @@ function wavetableToHeader(name, sampleRate)
                 b[offsets[i] + j] = Math.round(wavetable[i].array[j] * 32767);
             }
 	
-	var text = "const int " + name + "Offsets[] = {"
+	var text = "#pragma once\r\n\r\n"
+	text += "const int " + name + "Offsets[] = {"
 	for(var i = 0; i < offsets.length; i++)
 		text += offsets[i] + ", ";
 	text += "};\r\n";
